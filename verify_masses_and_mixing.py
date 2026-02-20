@@ -7,7 +7,7 @@ the single integer a1 = 5 in the 600-cell / E8 framework.
 What this script does:
   1. Defines constants: a1=5, b1=6, phi, N=120, N_gen=3, N_eig=9, degree=12.
   2. Verifies bare fermion masses  m_f = m_e * phi^(5a + 6b)  for all 9 fermions.
-  3. Verifies holonomy-corrected masses with sector-dependent (delta_d, delta_k).
+  3. Verifies norm-log corrected masses (C = 2/13, zero free parameters).
   4. Verifies CKM mixing angles from bare exponents + corrections.
   5. Verifies PMNS mixing angles from A5 representation theory.
   6. Verifies CKM and PMNS CP-violation phases.
@@ -17,6 +17,7 @@ Dependencies: numpy (for sqrt, pi, arctan, sin -- no exotic packages).
 Encoding: ASCII only (safe for Windows cp1252).
 
 Author: Razvan-Constantin Anghelina
+Version: 3.8 (February 2026)
 """
 
 import numpy as np
@@ -166,86 +167,154 @@ print("Bare mass RMS error (8 fermions, excl. electron): %.2f%%" % bare_rms)
 
 
 # ============================================================================
-# SECTION 4: HOLONOMY-CORRECTED FERMION MASSES
+# SECTION 4: NORM-LOG CORRECTED FERMION MASSES (Paper Eq. 43-44)
 # ============================================================================
 
-print_section("SECTION 4: HOLONOMY-CORRECTED MASSES")
+print_section("SECTION 4: NORM-LOG CORRECTED MASSES (zero free parameters)")
 
-# Sector-dependent corrections:
-#   m_f = m_e * phi^(a*(a1 + delta_d) + b*(b1 + delta_k))
-#
-# Leptons:     delta_d = sin^2(tW) = 6/26,     delta_k = -1/phi^4
-# Up quarks:   delta_d = alpha_s * 2/pi,        delta_k = +alpha_s
-# Down quarks: delta_d = -1/a1 = -1/5,          delta_k = -alpha_s
+# Universal coefficient: C = 4 / (a1^2 + 1) = 2/13
+C_coeff = 4.0 / (a1**2 + 1)    # = 2/13 = 0.15385
 
-sector_corrections = {
-    'leptons': {
-        'delta_d': sin2tW,                   # 6/26
-        'delta_k': -1.0 / phi**4,            # -0.14590
-        'fermions': ['mu', 'tau'],
-    },
-    'up_quarks': {
-        'delta_d': alpha_s_fw * 2.0 / np.pi, # 2*alpha_s/pi
-        'delta_k': alpha_s_fw,                # +alpha_s
-        'fermions': ['u', 'c', 't'],
-    },
-    'down_quarks': {
-        'delta_d': -1.0 / a1,                # -1/5
-        'delta_k': -alpha_s_fw,               # -alpha_s
-        'fermions': ['d', 's', 'b'],
-    },
-}
+# Lepton coefficient: c_ell = C * phi^3 / dim(ST)
+# where dim(ST) = Tr(phi^3) = 4 = dimension of spacetime
+d_ST = 4.0  # = Tr(phi^3) = phi^3 + phi'^3 = 4
+c_ell = C_coeff * phi**3 / d_ST
 
-print("Correction parameters by sector:")
-print()
-for sector_name, corr in sector_corrections.items():
-    dd = corr['delta_d']
-    dk = corr['delta_k']
-    print("  %-12s: delta_d = %+.6f,  delta_k = %+.6f" % (sector_name, dd, dk))
+print("Correction parameters (all derived from a1 = %d):" % a1)
+print("  C = 4/(a1^2 + 1) = 4/%d = %.6f = 2*sin^2(tW)/N_gen" % (a1**2+1, C_coeff))
+print("  c_ell = C*phi^3/d_ST = %.6f * %.4f / %d = %.6f" % (
+    C_coeff, phi**3, int(d_ST), c_ell))
+print("  Lepton exponent k = 3/4 = 1 - 1/d_ST")
 print()
 
-# Build lookup: fermion name -> sector
-fermion_sector = {}
-for sector_name, corr in sector_corrections.items():
-    for fname in corr['fermions']:
-        fermion_sector[fname] = sector_name
+# Norm in Z[phi]: N(a + b*phi) = a^2 + a*b - b^2
+def zphi_norm(a, b):
+    return a**2 + a*b - b**2
 
-print("%-6s %8s %8s %8s %12s %12s %10s %10s" % (
-    "Name", "delta_d", "delta_k", "n_eff", "m_corr/MeV", "m_exp/MeV",
-    "Bare err", "Corr err"))
-print("-" * 82)
+# Galois conjugate: z' = a + b*phi', where phi' = (1-sqrt(5))/2
+phi_conj = (1.0 - np.sqrt(a1)) / 2.0  # = -1/phi
+
+def galois_conj(a, b):
+    return a + b * phi_conj
+
+# Compute norm-log correction for each fermion
+def normlog_delta(name, a, b):
+    """Compute delta_f for fermion with quantum numbers (a,b)."""
+    z_prime = galois_conj(a, b)
+    N_z = zphi_norm(a, b)
+
+    # Electron: z' = 0, delta = 0
+    if name == 'e':
+        return 0.0, "electron (z'=0)"
+
+    # Leptons: delta = c_ell * sign(z') * |z'|^(3/4)
+    if name in ('mu', 'tau'):
+        delta = c_ell * np.sign(z_prime) * abs(z_prime)**0.75
+        return delta, "lepton: c_ell*sign(z')*|z'|^{3/4}"
+
+    # Up quarks (T3 = +1/2)
+    if name in ('u', 'c', 't'):
+        if abs(N_z) <= 1:
+            return 0.0, "up quark, |N|=1"
+        delta = C_coeff * np.log(abs(N_z))
+        return delta, "+C*ln|N|, N=%d" % N_z
+
+    # Down quarks (T3 = -1/2)
+    if name in ('d', 's', 'b'):
+        if b == 0:
+            # Rational sector
+            return -2.0/a1, "-2/a1 (rational, b=0)"
+        if abs(N_z) <= 1:
+            # Unit sector
+            delta = -N_gen * C_coeff / phi**2
+            return delta, "-N_gen*C/phi^2 (unit, |N|=1)"
+        # Prime sector
+        delta = -C_coeff * np.log(abs(N_z)) / phi
+        return delta, "-C*ln|N|/phi, N=%d" % N_z
+
+    return 0.0, "unknown"
+
+print("Norm-log correction formula (Eq. 43 in paper):")
+print("  Unified quark formula (|N|>1):")
+print("    delta_q = 2*T3 * C * ln|N(z)| * phi^(T3-1/2)")
+print("  Leptons: delta_ell = c_ell * sign(z') * |z'|^(3/4)")
+print("  Three Z[phi] sectors: rational (b=0), unit (|N|=1), prime (|N|>1)")
+print()
+
+print("%-6s (%+2s,%+2s) %6s %10s %8s %12s %12s %10s" % (
+    "Name", "a", "b", "N(z)", "delta", "n_eff", "m_corr/MeV", "m_exp/MeV",
+    "Error"))
+print("-" * 88)
 
 corrected_errors = []
+corrected_quark_errors = []
+corrected_lepton_errors = []
 
 for name, gen, a, b in fermion_data:
     m_exp = pdg_masses[name]
     n_bare = a1 * a + b1 * b
+    N_z = zphi_norm(a, b)
 
     if name == 'e':
-        # Electron is the input; no correction needed
-        print("%-6s %8s %8s %8s %12.2f %12.2f %10s %10s" % (
-            name, "---", "---", "0.000", m_exp, m_exp, "(input)", "(input)"))
+        print("%-6s (%+2d,%+2d) %6d %10s %8s %12.4f %12.4f %10s" % (
+            name, a, b, N_z, "0", "0.000", m_exp, m_exp, "(input)"))
         continue
 
-    sector = fermion_sector[name]
-    dd = sector_corrections[sector]['delta_d']
-    dk = sector_corrections[sector]['delta_k']
-
-    n_eff = a * (a1 + dd) + b * (b1 + dk)
+    delta, desc = normlog_delta(name, a, b)
+    n_eff = n_bare + delta
     m_corr = m_e * phi**n_eff
-    m_bare = m_e * phi**n_bare
 
-    err_bare = pct_error(m_bare, m_exp)
     err_corr = pct_error(m_corr, m_exp)
     corrected_errors.append(abs(err_corr))
 
-    print("%-6s %+8.4f %+8.4f %8.3f %12.2f %12.2f %+9.1f%% %+9.1f%%" % (
-        name, dd, dk, n_eff, m_corr, m_exp, err_bare, err_corr))
+    if name in ('u', 'c', 't', 'd', 's', 'b'):
+        corrected_quark_errors.append(abs(err_corr))
+    if name in ('mu', 'tau'):
+        corrected_lepton_errors.append(abs(err_corr))
+
+    print("%-6s (%+2d,%+2d) %6d %+10.4f %8.3f %12.4f %12.4f %+9.2f%%" % (
+        name, a, b, N_z, delta, n_eff, m_corr, m_exp, err_corr))
 
 corr_rms = rms(corrected_errors)
+quark_rms = rms(corrected_quark_errors) if corrected_quark_errors else 0
+lepton_rms = rms(corrected_lepton_errors) if corrected_lepton_errors else 0
 print()
-print("Corrected mass RMS error (8 fermions, excl. electron): %.2f%%" % corr_rms)
-print("Improvement: bare %.1f%% -> corrected %.1f%%" % (bare_rms, corr_rms))
+print("RMS errors (norm-log corrected, zero free parameters):")
+print("  All 8 fermions (excl. electron): %.3f%%" % corr_rms)
+print("  6 quarks:                        %.3f%%" % quark_rms)
+print("  2 leptons (mu, tau):             %.3f%%" % lepton_rms)
+print("  Improvement: bare %.1f%% -> corrected %.2f%%" % (bare_rms, corr_rms))
+print()
+
+# Verify unified quark formula for |N|>1 quarks
+print("Unified quark formula verification (Eq. 44):")
+print("  delta_q = 2*T3 * C * ln|N| * phi^(T3-1/2)")
+for name, gen, a, b in fermion_data:
+    N_z = zphi_norm(a, b)
+    if name in ('c', 't'):  # up quarks with |N|>1
+        T3 = 0.5
+        delta_unified = 2*T3 * C_coeff * np.log(abs(N_z)) * phi**(T3-0.5)
+        delta_direct, _ = normlog_delta(name, a, b)
+        print("  %s: T3=%+.1f, |N|=%d, delta_unified=%.4f, delta_direct=%.4f, match=%s" % (
+            name, T3, abs(N_z), delta_unified, delta_direct,
+            "PASS" if abs(delta_unified - delta_direct) < 1e-10 else "FAIL"))
+    if name == 'b':  # down quark with |N|>1
+        T3 = -0.5
+        delta_unified = 2*T3 * C_coeff * np.log(abs(N_z)) * phi**(T3-0.5)
+        delta_direct, _ = normlog_delta(name, a, b)
+        print("  %s: T3=%+.1f, |N|=%d, delta_unified=%.4f, delta_direct=%.4f, match=%s" % (
+            name, T3, abs(N_z), delta_unified, delta_direct,
+            "PASS" if abs(delta_unified - delta_direct) < 1e-10 else "FAIL"))
+
+# Build lookup for summary section
+fermion_sector = {}
+for name, gen, a, b in fermion_data:
+    if name in ('mu', 'tau', 'e'):
+        fermion_sector[name] = 'leptons'
+    elif name in ('u', 'c', 't'):
+        fermion_sector[name] = 'up_quarks'
+    else:
+        fermion_sector[name] = 'down_quarks'
 
 
 # ============================================================================
@@ -471,15 +540,14 @@ for name, gen, a, b in fermion_data:
     results.append(("m_%s (bare)" % name, "%.2f MeV" % m_pred,
                      "%.2f MeV" % m_exp, "%+.2f%%" % err))
 
-# Corrected masses
+# Norm-log corrected masses
 for name, gen, a, b in fermion_data:
     if name == 'e':
         continue
     m_exp = pdg_masses[name]
-    sector = fermion_sector[name]
-    dd = sector_corrections[sector]['delta_d']
-    dk = sector_corrections[sector]['delta_k']
-    n_eff = a * (a1 + dd) + b * (b1 + dk)
+    n_bare = a1 * a + b1 * b
+    delta, _ = normlog_delta(name, a, b)
+    n_eff = n_bare + delta
     m_corr = m_e * phi**n_eff
     err = pct_error(m_corr, m_exp)
     results.append(("m_%s (corr)" % name, "%.2f MeV" % m_corr,
