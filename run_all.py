@@ -16,6 +16,8 @@ scripts = [
     "verify_berry_phase.py",
     "verify_spectral_action.py",
     "verify_mckay_chirality.py",
+    "verify_galois_kernel.py",
+    "verify_neutrino_masses.py",
 ]
 
 results = {}
