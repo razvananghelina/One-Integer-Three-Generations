@@ -18,6 +18,7 @@ scripts = [
     "verify_mckay_chirality.py",
     "verify_galois_kernel.py",
     "verify_neutrino_masses.py",
+    "verify_polytope_uniqueness.py",
 ]
 
 results = {}

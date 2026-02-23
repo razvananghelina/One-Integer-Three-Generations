@@ -26,6 +26,7 @@ Each script is self-contained (no cross-imports) and prints PASS/FAIL for every 
 | `verify_berry_phase.py` | Berry phase = 1/phi^4 over all 1200 faces, face-transitivity, 5 fiber values | ~60s |
 | `verify_spectral_action.py` | Simplicial complex counts, boundary operators, Hodge decomposition 119+601=720, Betti numbers, Seeley-DeWitt coefficients, gauge group from A_5 | ~60s |
 | `verify_mckay_chirality.py` | McKay graph = affine E8 (from 2I character table), bipartite chirality gamma_F = (-1)^{2j}, Casimir sum rules (sum C_2 = 26), Wilson line masses (9/9), fermionic action dimensions (H+ = H- = 39600), mass quantum number sum rules, rep ring Z/2 grading (45/45) | <1s |
+| `verify_polytope_uniqueness.py` | All 6 regular 4D polytopes tested against 7 SM criteria. 600-cell: 7/7, 120-cell (dual): 6/7, all independent alternatives: 0/7. Uniqueness of a1=5, N_gen from ring structure, Weinberg angle, alpha, mass hierarchy, mixing angles, anomaly cancellation | <1s |
 
 ## Running
 
@@ -36,6 +37,7 @@ python verify_masses_and_mixing.py
 python verify_berry_phase.py
 python verify_spectral_action.py
 python verify_mckay_chirality.py
+python verify_polytope_uniqueness.py
 ```
 
 Or run all at once:
@@ -54,7 +56,6 @@ All tests should pass. Any failure indicates either a bug in the verification co
 
 ## What These Scripts Do NOT Verify
 
-- The Diophantine equation a_1! = 4*a_1*(a_1+1) having a unique solution (trivial to check by hand)
 - The cosmological constant formula (pattern, not derivation)
 - The dark matter abundance ratio (speculative)
 - The 3D->4D continuum limit of the spectral triple
