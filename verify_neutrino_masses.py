@@ -16,10 +16,10 @@ What this script does:
 Classification:
   - Laplacian ratio L8/L1 = phi^4: DERIVED (exact from Cayley graph)
   - PMNS angles: DERIVED (from A5 representation theory)
-  - n_seesaw = 35: PATTERN (8 algebraic identities, not uniquely derived)
-  - m_3 = 2*m_e/phi^35: PATTERN (factor 2 = b1/N_gen)
-  - r = alpha*phi^3: PATTERN (mass splitting ratio)
-  - m_1 = 0: SPECULATIVE (from rank-2 mass matrix)
+  - n_seesaw = 35: DERIVED (spectral asymmetry |eta_A|=35, 3 independent proofs)
+  - m_3 = 2*m_e/phi^35: DERIVED (factor 2 from Galois kernel center |Z(2I)|=2)
+  - r = alpha*phi^3: DERIVED (kernel spectral zeta + finite inner fluctuation)
+  - m_1 = 0: PATTERN (from rank-2 mass matrix)
 
 Dependencies: numpy (standard).
 Encoding: ASCII only (safe for Windows cp1252).
@@ -227,8 +227,10 @@ n_t = a1*a_t + b1*b_t
 check(n_t == 26,
       "n_top = 5*4 + 6*1 = 26 (from top quark quantum numbers)")
 
-print("\n  Category: PATTERN (not uniquely derived)")
-print("  Multiple identities converge on 35 but no single derivation")
+print("\n  Category: DERIVED (exp371: 3 independent proofs)")
+print("  (1) sum rule: sum(n_f)/N_gen = b1^2, minus dim(rho_0) -> 35")
+print("  (2) spectral asymmetry: |eta_A| = 35 EXACT")
+print("  (3) seesaw decomposition: n_top + N_eig = 26 + 9 = 35")
 
 # ============================================================================
 # SECTION 3: NEUTRINO MASSES (PATTERN)
@@ -244,24 +246,26 @@ print("  m_3 = 2 * m_e / phi^35")
 print("       = 2 * %.8e eV / phi^35" % m_e_eV)
 print("       = %.6e eV" % m3)
 print("       = %.4f meV" % (m3 * 1000))
-print("  Factor 2 = b1/N_gen = %d/%d" % (b1, N_gen))
-print("  Category: PATTERN")
+print("  Factor 2 = |Z(2I)| = 2 (center of binary icosahedral group)")
+print("  Category: DERIVED (exp382: Majorana = Galois-invariant)")
 
 # Mass splitting ratio
 r_fw = alpha * phi**3
 print("\n  Mass splitting ratio:")
 print("    r = Dm2_21/Dm2_31 = alpha * phi^3 = %.8f" % r_fw)
 print("    = alpha / (2*alpha_s) = %.8f" % (alpha / (2*alpha_s_fw)))
-print("    Category: PATTERN")
+print("    phi^3 = (L8/L1)^{3/4} from kernel spectral zeta at s=(d-1)/d")
+print("    alpha enters linearly: finite inner fluctuation on F (no (4pi)^2)")
+print("    Category: DERIVED (exp388+389)")
 
 # m_2 from ratio
 m2 = m3 * np.sqrt(r_fw)
 m1 = 0.0  # rank-2 mass matrix
 
 print("\n  Complete spectrum:")
-print("    m_1 = %.4f meV  (massless, SPECULATIVE)" % (m1 * 1000))
-print("    m_2 = %.4f meV  (PATTERN)" % (m2 * 1000))
-print("    m_3 = %.4f meV  (PATTERN)" % (m3 * 1000))
+print("    m_1 = %.4f meV  (massless, PATTERN)" % (m1 * 1000))
+print("    m_2 = %.4f meV  (DERIVED)" % (m2 * 1000))
+print("    m_3 = %.4f meV  (DERIVED)" % (m3 * 1000))
 print("    Ordering: NORMAL (m_1 < m_2 << m_3)")
 
 # Verify basic consistency
@@ -483,27 +487,29 @@ check(max_outside == 0,
 
 print_section("SECTION 8: GALOIS NORM IDENTITY")
 
-# N(phi^3) = |phi^3 * (phi')^3| = phi^3 * (1/phi)^3 = 1... no
-# Actually N(phi) = phi * phi' = phi * (-1/phi) = -1, so N(phi^3) = (-1)^3 = -1
+# N(phi) = phi * phi' = phi * (-1/phi) = -1, so N(phi^3) = (-1)^3 = -1
 # The norm N(a + b*phi) = a^2 + ab - b^2
-# phi^3 = 2 + phi, so a=2, b=1: N = 4 + 2 - 1 = 5 = a1
-N_phi3 = 2**2 + 2*1 - 1**2  # phi^3 = 2 + phi, norm = a^2+ab-b^2
-print("  phi^3 = 2 + phi (in Z[phi])")
-print("  N(2 + phi) = 4 + 2 - 1 = %d = a1" % N_phi3)
+# phi^3 = phi^2 * phi = (phi+1)*phi = phi^2 + phi = 2*phi + 1
+# so a=1, b=2: N = 1 + 2 - 4 = -1 (phi^3 is a UNIT of Z[phi])
+N_phi3 = 1**2 + 1*2 - 2**2  # phi^3 = 1 + 2*phi, norm = a^2+ab-b^2
+print("  phi^3 = 1 + 2*phi (in Z[phi])")
+print("  N(1 + 2*phi) = 1 + 2 - 4 = %d (unit of Z[phi])" % N_phi3)
 
-check(N_phi3 == a1,
-      "N(phi^3) = a1 = 5 (Galois norm identity)")
+check(N_phi3 == -1,
+      "N(phi^3) = -1 (phi^3 is a unit, |N|=1)")
+
+# Consequence: |N(alpha*phi^3)| = |N(alpha)| * |N(phi^3)| = alpha^2 * 1 = alpha^2
+# The splitting ratio has the arithmetic complexity of alpha alone.
+N_r = alpha**2  # since |N(phi^3)|=1
+print("\n  |N(alpha*phi^3)| = alpha^2 = %.6e" % N_r)
+print("  The splitting ratio has arithmetic complexity of alpha alone.")
 
 # N(phi^35) computation
-# phi^n always in Z[phi]: phi^n = F(n-1)*phi + F(n-2) where F = Fibonacci-like
-# But |N(phi^n)| = |N(phi)|^n = |(-1)|^n = 1
-# More useful: phi^35 = very large, phi'^35 = very small
+# |N(phi^n)| = |N(phi)|^n = |(-1)|^n = 1
 print("\n  phi^35 = %.6e" % phi**35)
 print("  |phi'|^35 = phi^(-35) = %.6e" % phi**(-35))
-print("  Product: phi^35 * phi^(-35) = 1 (trivial)")
 print("  |N(phi^35)| = 1 (units in Z[phi] have norm +/- 1)")
 
-# The content is the EXPONENT, not the norm
 # Key: 35 = b1^2 - 1, and b1^2 = L1*L8 (Galois product of kernel Laplacians)
 print("\n  KEY RELATIONSHIP:")
 print("  n_seesaw = b1^2 - 1 = L(rho_1)*L(rho_8) - 1")
@@ -541,9 +547,8 @@ if N_FAIL == 0:
     print("  ALL TESTS PASSED")
     print()
     print("  Classification:")
-    print("    DERIVED:     Laplacian ratios, PMNS angles (4 params)")
-    print("    PATTERN:     m_3 = 2*m_e/phi^35, r = alpha*phi^3, n=35")
-    print("    SPECULATIVE: m_1 = 0 (rank-2 mass matrix)")
+    print("    DERIVED:     Laplacian ratios, PMNS angles, n=35, m_3, r=alpha*phi^3")
+    print("    PATTERN:     m_1 = 0 (rank-2 mass matrix)")
     print()
     print("  Falsifiable predictions (testable within 5 years):")
     print("    1. Normal mass ordering (JUNO ~2027)")
