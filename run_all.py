@@ -19,6 +19,7 @@ scripts = [
     "verify_galois_kernel.py",
     "verify_neutrino_masses.py",
     "verify_polytope_uniqueness.py",
+    "verify_tqft_entanglement.py",
 ]
 
 results = {}
